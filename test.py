@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import matplotlib.pyplot as plt
 import streamlit as st
 import math
 
@@ -204,6 +205,60 @@ if st.sidebar.button("🔄 Hesapla", type="primary", use_container_width=True):
                 st.success("✅ Doğrulama başarılı: İki yöntemle hesaplanan uzun vade sonu değerler eşleşiyor.")
             else:
                 st.warning(f"⚠️ Doğrulama uyarısı: Değerler arasında küçük bir fark var (Fark: {abs(bilesik_uzun_sonu_deger - uzun_vade_basit_faiz_sonu_deger):.2e}). Bu, yuvarlama farklarından kaynaklanıyor olabilir.")
+
+            # --- Grafik Ekleme ---
+            st.subheader("📈 Günlük Bileşik Getiri Grafiği")
+
+            # Grafik için veri hazırlama
+            # 1. Kısa Vade Dönemi
+            days_kv = list(range(kisa_vade_gun + 1)) # 0'dan kisa_vade_gun'e kadar
+            returns_kv = [(1 + gunluk_bilesik_kisa)**d for d in days_kv]
+
+            # 2. Forward Dönemi
+            # Bu dönem kisa_vade_gun'den baslar ve uzun_vade_gun'e kadar devam eder.
+            # X ekseni için günler: kisa_vade_gun, kisa_vade_gun + 1, ..., uzun_vade_gun
+            days_fv_plot = list(range(kisa_vade_gun, uzun_vade_gun + 1))
+            # Y ekseni için getiriler: Bu dönemin getirisi, kısa vade sonundaki birikmiş değer üzerinden hesaplanır.
+            # Forward periyodunun kendi içindeki gün sayısı: 0, 1, ..., ara_donem_gun
+            returns_fv_plot = [returns_kv[-1] * ((1 + gunluk_bilesik_ara)**d) for d in range(ara_donem_gun + 1)]
+
+            # 3. Birleşik (Uzun Vade) Dönemi
+            # Bu, 0. günden uzun_vade_gun'e kadar olan toplam birikimi gösterir.
+            days_uzun_vade_plot = list(range(uzun_vade_gun + 1))
+            returns_uzun_vade_plot = []
+            for d_idx, d_val in enumerate(days_uzun_vade_plot):
+                if d_val <= kisa_vade_gun:
+                    returns_uzun_vade_plot.append(returns_kv[d_idx]) # Kısa vade bölümünden al
+                else:
+                    # Forward bölümü için, kisa_vade_gun'deki değerden başlayarak hesapla
+                    # Forward periyodundaki gün sayısı: d_val - kisa_vade_gun
+                    day_in_forward_period = d_val - kisa_vade_gun
+                    returns_uzun_vade_plot.append(
+                        returns_kv[-1] * ((1 + gunluk_bilesik_ara)**day_in_forward_period)
+                    )
+
+            plt.figure(figsize=(12, 7))
+
+            # 1. Kısa Vade Çizgisi
+            plt.plot(days_kv, returns_kv, label=f"Kısa Vade ({kisa_vade_gun} gün)", marker='o', linestyle='-', markersize=4, zorder=3)
+
+            # 2. Forward Dönem Çizgisi
+            # days_fv_plot ve returns_fv_plot zaten doğru başlangıç değerlerini içeriyor.
+            plt.plot(days_fv_plot, returns_fv_plot, label=f"Forward Dönem ({ara_donem_gun} gün)", marker='s', linestyle='-', markersize=4, zorder=3)
+
+            # 3. Birleşik Uzun Vade Çizgisi
+            # returns_uzun_vade_plot, 0. günden uzun vade sonuna kadar olan birleşik getiriyi zaten hesaplıyor.
+            plt.plot(days_uzun_vade_plot, returns_uzun_vade_plot, label=f"Birleşik Getiri ({uzun_vade_gun} gün)", linestyle='--', color='purple', linewidth=2, zorder=2)
+
+            plt.title("Günlük Bileşik Getiri Grafiği", fontsize=16)
+            plt.xlabel("Günler", fontsize=12)
+            plt.ylabel("Kümülatif Getiri (Başlangıç = 1.0)", fontsize=12)
+            plt.legend(fontsize=10)
+            plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+            plt.tight_layout()
+            st.pyplot(plt.gcf())
+            plt.close() # Streamlit'te memory leak önlemek için figürü kapat
+            # --- Grafik Ekleme Sonu ---
         else:
             st.warning("Doğrulama için gerekli günlük bileşik getirilerden biri veya birkaçı hesaplanamadı.")
     else:
