@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import matplotlib.pyplot as plt
+import pandas as pd
 import streamlit as st
 import math
 
@@ -237,27 +237,14 @@ if st.sidebar.button("🔄 Hesapla", type="primary", use_container_width=True):
                         returns_kv[-1] * ((1 + gunluk_bilesik_ara)**day_in_forward_period)
                     )
 
-            plt.figure(figsize=(12, 7))
+            # Prepare data for st.line_chart
+            df_kv = pd.DataFrame({'Günler': days_kv, 'Kısa Vade': returns_kv}).set_index('Günler')
+            df_fv = pd.DataFrame({'Günler': days_fv_plot, 'Forward Dönem': returns_fv_plot}).set_index('Günler')
+            df_uzun = pd.DataFrame({'Günler': days_uzun_vade_plot, 'Birleşik Getiri': returns_uzun_vade_plot}).set_index('Günler')
 
-            # 1. Kısa Vade Çizgisi
-            plt.plot(days_kv, returns_kv, label=f"Kısa Vade ({kisa_vade_gun} gün)", marker='o', linestyle='-', markersize=4, zorder=3)
+            chart_df_merged = pd.concat([df_kv, df_fv, df_uzun], axis=1)
 
-            # 2. Forward Dönem Çizgisi
-            # days_fv_plot ve returns_fv_plot zaten doğru başlangıç değerlerini içeriyor.
-            plt.plot(days_fv_plot, returns_fv_plot, label=f"Forward Dönem ({ara_donem_gun} gün)", marker='s', linestyle='-', markersize=4, zorder=3)
-
-            # 3. Birleşik Uzun Vade Çizgisi
-            # returns_uzun_vade_plot, 0. günden uzun vade sonuna kadar olan birleşik getiriyi zaten hesaplıyor.
-            plt.plot(days_uzun_vade_plot, returns_uzun_vade_plot, label=f"Birleşik Getiri ({uzun_vade_gun} gün)", linestyle='--', color='purple', linewidth=2, zorder=2)
-
-            plt.title("Günlük Bileşik Getiri Grafiği", fontsize=16)
-            plt.xlabel("Günler", fontsize=12)
-            plt.ylabel("Kümülatif Getiri (Başlangıç = 1.0)", fontsize=12)
-            plt.legend(fontsize=10)
-            plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-            plt.tight_layout()
-            st.pyplot(plt.gcf())
-            plt.close() # Streamlit'te memory leak önlemek için figürü kapat
+            st.line_chart(chart_df_merged)
             # --- Grafik Ekleme Sonu ---
         else:
             st.warning("Doğrulama için gerekli günlük bileşik getirilerden biri veya birkaçı hesaplanamadı.")
